@@ -1,0 +1,13 @@
+# OS / local
+.DS_Store
+.npm-cache/
+
+# Editor (optional)
+.idea/
+*.swp
+*.swo
+
+# Root-level secrets (web-app/.gitignore covers web-app/.env*)
+.env
+.env.local
+.env.*.local
