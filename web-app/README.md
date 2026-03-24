@@ -14,6 +14,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) (default port; use the URL shown in the terminal).
 
+## Vercel
+
+This folder is the Next.js root. In the Vercel project, set **Root Directory** to **`web-app`** (not the repository root). See the [root README](../README.md#deploy-on-vercel) for the full checklist.
+
 ## Documentation
 
 - **[docs/PRD.md](./docs/PRD.md)** — Product requirements (workforce dashboard vision) and **§7 implementation snapshot** vs this repo.
