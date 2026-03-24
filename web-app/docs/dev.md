@@ -12,12 +12,13 @@
 | `ALLOW_UNAUTHENTICATED_DEV` | unset / `false` | With `REQUIRE_SUPABASE_AUTH=true` and no session → **`401`**. |
 | `SHOW_DEV_DATA_BANNER` | unset / `true` | When the dev banner would show (`DATA_MODE=api` and auth not strictly required), the yellow strip appears. |
 | `SHOW_DEV_DATA_BANNER` | `false`, `0`, `off`, `no` | **Hides** that banner only — same API/auth behavior; use when the strip is noisy locally. |
+| `LABOR_ESTIMATE_BLENDED_RATE` | number (optional) | **Server-only.** USD per weighted hour for chart labor estimates: `(regular + OT×1.5 + DT×2) × rate`. Default **25**. Set in `.env.local` to match a company default until per-employee rates are used in this API. |
 
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required when using Supabase clients (e.g. `DATA_MODE=api`).
 
 ## How to tell what you’re seeing
 
-- KPI card badge **“Mock aggregate”** (and similar mock-only copy) → response came from **`getMockKpis()`** etc., **not** live SQL aggregates.
+- **Viewing demo data** banner (when shown) → you are on **`DATA_MODE=api`** without a strict auth wall; APIs may return **`getMockKpis()`** / mock stores instead of live SQL.
 - With **`REQUIRE_SUPABASE_AUTH` unset** (or not `true`) and **`DATA_MODE=api`**, the dashboard stays open without signing in; responses can be **mock** while the database is **unused**.
 
 ## Production checklist

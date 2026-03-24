@@ -81,6 +81,48 @@ export type SessionInfo = {
   role: AppRole | null;
 };
 
+export type PtoRequestType = "vacation" | "sick" | "personal";
+export type PtoRequestStatus = "pending" | "approved" | "denied" | "cancelled";
+export type ShiftTemplate = "morning" | "evening" | "overnight" | "custom";
+
+/** PTO row for lists (API joins names). */
+export type PtoRequestRow = {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  storeId: string;
+  storeName: string;
+  requestType: PtoRequestType;
+  startDate: string;
+  endDate: string;
+  note: string | null;
+  status: PtoRequestStatus;
+  reviewedById: string | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  managerNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Scheduled shift for calendar-style lists (API joins names). */
+export type ScheduledShiftRow = {
+  id: string;
+  storeId: string;
+  storeName: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  startAt: string;
+  endAt: string;
+  shiftTemplate: ShiftTemplate;
+  roleLabel: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AuditLogRow = {
   id: string;
   createdAt: string;
@@ -113,11 +155,43 @@ export type PolicyConfigRow = {
   roundingMode: string;
 };
 
+/** Stable keys for dashboard KPI payloads (`/api/dashboard-kpis`). */
+export type DashboardKpiKey =
+  /** Closed shifts in the last 14d with no `payroll_approved_at` (Timesheets). */
+  | "pending_approvals"
+  | "flagged_short_entries"
+  | "clocked_in"
+  | "total_hours_today"
+  /** Active employees missing a store assignment, profile, or hourly rate. */
+  | "profile_gaps"
+  /** Stores marked active in directory. */
+  | "active_stores"
+  /** Sum of `ot_hours` on shifts whose clock-in falls in the rolling last 7 UTC days. */
+  | "overtime_hours_7d";
+
 export type DashboardKpiItem = {
+  key: DashboardKpiKey;
   label: string;
   value: string;
   change: string;
-  tone: "primary" | "warning" | "success" | "accent";
+  tone: "primary" | "warning" | "success" | "accent" | "danger";
+  /** One-line scan context (e.g. newest case) without leaving the dashboard. */
+  preview?: string;
+  /** Primary action for alert-style metrics; optional for live/summary. */
+  ctaHref?: string;
+  ctaLabel?: string;
+};
+
+/** Structured rows for the manager activity table (time & attendance feed). */
+export type ActivityFeedRow = {
+  id: string;
+  employeeName: string;
+  eventType: string;
+  eventTypeKey: string;
+  occurredAt: string;
+  shiftStatus: string;
+  exception: string | null;
+  storeName: string;
 };
 
 export type DashboardLinePoint = {

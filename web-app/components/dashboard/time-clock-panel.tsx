@@ -7,12 +7,16 @@ import { toast } from "sonner";
 import { fetchEmployeeRoster } from "@/lib/api/employees";
 import { createClockEvent, fetchTimeEntries, fetchTimeEntryOptions } from "@/lib/api/time-entries";
 import { queryKeys } from "@/lib/query-keys";
+import { isActiveShiftAlert } from "@/lib/shift-attention";
 import type { ActiveTimeEntry, CreateClockEventInput } from "@/lib/types/domain";
 
+import { dataTable } from "@/components/dashboard/data-table-styles";
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 function statusLabel(status: ActiveTimeEntry["status"]): string {
   if (status === "clocked_in") return "Clocked in";
@@ -21,10 +25,10 @@ function statusLabel(status: ActiveTimeEntry["status"]): string {
   return "Clocked out";
 }
 
-function statusTone(status: ActiveTimeEntry["status"]): "primary" | "warning" | "success" {
-  if (status === "flagged") return "warning";
-  if (status === "on_break") return "success";
-  return "primary";
+function statusTone(status: ActiveTimeEntry["status"]): "alert" | "success" | "neutral" {
+  if (isActiveShiftAlert(status)) return "alert";
+  if (status === "clocked_in") return "success";
+  return "neutral";
 }
 
 async function invalidateAfterClockEvent(queryClient: ReturnType<typeof useQueryClient>) {
@@ -153,7 +157,7 @@ export function TimeClockPanel() {
     }
     const resolvedStore = openShift?.storeId ?? storeId;
     if (!resolvedStore) {
-      toast.error("Select a store");
+      toast.error("Select a location");
       return;
     }
     const payload: CreateClockEventInput = {
@@ -173,25 +177,30 @@ export function TimeClockPanel() {
   if (optionsError || entriesError || rosterError) {
     return (
       <Card className="border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--danger)]">
-        Couldn&apos;t load time clock data. Check your connection, sign in again, or contact your workspace administrator
-        if this continues.
+        Could not load the time clock. Check your connection, sign in again, or ask your administrator if this keeps
+        happening.
       </Card>
     );
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+    <div className="flex flex-col gap-5">
       <Card className="border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Open shifts</h2>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
-              {floorCount} on the floor in this view (clocked in or on break). Flagged rows stay listed until resolved.
+          <div className="min-w-0 flex-1 space-y-2">
+            <SectionHeader
+              as="h2"
+              title="Open shifts"
+              description="Who is clocked in or on break, grouped by location."
+            />
+            <p className="text-sm text-[var(--text-secondary)]">
+              <span className="font-medium text-[var(--text-primary)]">{floorCount}</span> people clocked in or on break
+              in this view. Flagged rows stay here until you fix them.
             </p>
           </div>
-          <div className="w-full min-w-[10rem] sm:max-w-[220px]">
+          <div className="w-full min-w-[10rem] shrink-0 sm:max-w-[220px]">
             <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="tc-focus-store">
-              Floor scope
+              Show
             </label>
             <select
               id="tc-focus-store"
@@ -210,7 +219,7 @@ export function TimeClockPanel() {
           </div>
         </div>
 
-        <div className="mt-4 max-h-[min(420px,55vh)] overflow-auto rounded-xl border border-[var(--border)]">
+        <div className={cn("mt-4 max-h-[min(520px,65vh)]", dataTable.shell)}>
           {entriesLoading ? (
             <div className="p-8 text-center text-sm text-[var(--text-muted)]">Loading shifts…</div>
           ) : entriesFiltered.length === 0 ? (
@@ -218,22 +227,22 @@ export function TimeClockPanel() {
               {focusStoreId ? "No open shifts for this store." : "No open shifts."}
             </div>
           ) : (
-            <table className="w-full min-w-[320px] text-left text-sm">
-              <thead className="sticky top-0 z-[1] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <table className={`${dataTable.table} min-w-[320px]`}>
+              <thead className={cn(dataTable.thead, "sticky top-0 z-[1]")}>
                 <tr>
-                  <th className="px-3 py-2 font-medium">Employee</th>
-                  {!focusStoreId ? <th className="px-3 py-2 font-medium">Store</th> : null}
-                  <th className="px-3 py-2 font-medium">Status</th>
+                  <th className={dataTable.th}>Employee</th>
+                  {!focusStoreId ? <th className={dataTable.th}>Store</th> : null}
+                  <th className={dataTable.th}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border)]">
+              <tbody className={dataTable.tbody}>
                 {shiftsByStore.map((section) => (
                   <Fragment key={section.storeId}>
                     {!focusStoreId ? (
                       <tr className="bg-[color-mix(in_oklab,var(--sidebar-ink)_6%,var(--surface-soft))]">
                         <td
                           colSpan={3}
-                          className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
+                          className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]"
                         >
                           {section.storeName}{" "}
                           <span className="font-normal text-[var(--text-muted)]">({section.rows.length})</span>
@@ -243,13 +252,15 @@ export function TimeClockPanel() {
                     {section.rows.map((row) => (
                       <tr
                         key={row.id}
-                        className={
+                        className={cn(
                           row.employeeId === employeeId
-                            ? "bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))]"
-                            : ""
-                        }
+                            ? "bg-[color-mix(in_oklab,var(--accent)_10%,var(--surface))]"
+                            : isActiveShiftAlert(row.status)
+                              ? "bg-amber-100 ring-1 ring-inset ring-amber-300/80"
+                              : undefined,
+                        )}
                       >
-                        <td className="px-3 py-2.5 font-medium text-[var(--text-primary)]">
+                        <td className={`${dataTable.td} font-medium`}>
                           <button
                             type="button"
                             className="text-left hover:underline"
@@ -259,10 +270,8 @@ export function TimeClockPanel() {
                           </button>
                           <div className="text-xs font-normal text-[var(--text-muted)]">{row.employeeCode}</div>
                         </td>
-                        {!focusStoreId ? (
-                          <td className="px-3 py-2.5 text-[var(--text-secondary)]">{row.storeName}</td>
-                        ) : null}
-                        <td className="px-3 py-2.5">
+                        {!focusStoreId ? <td className={dataTable.tdMuted}>{row.storeName}</td> : null}
+                        <td className={dataTable.td}>
                           <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>
                         </td>
                       </tr>
@@ -276,16 +285,16 @@ export function TimeClockPanel() {
       </Card>
 
       <Card className="border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Record event</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Choose an employee and store. Clock in, breaks, and clock out unlock based on whether they already have an
-          open shift.
-        </p>
+        <SectionHeader
+          as="h2"
+          title="Record time"
+          description="Clock in, start or end a break, or clock out for the person you select."
+        />
 
         <div className="mt-5 space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="tc-employee">
-              Employee {focusStoreId ? "(filtered by floor scope above)" : "(grouped by location)"}
+              Employee {focusStoreId ? "(only the location chosen above)" : "(grouped by location)"}
             </label>
             <select
               id="tc-employee"
@@ -294,7 +303,7 @@ export function TimeClockPanel() {
               disabled={optionsLoading || rosterLoading}
               className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
             >
-              <option value="">{rosterLoading ? "Loading roster…" : "Select employee"}</option>
+              <option value="">{rosterLoading ? "Loading…" : "Select employee"}</option>
               {rosterGroups.length > 0
                 ? rosterGroups.map((group) => (
                     <optgroup key={group.storeId} label={group.storeName}>
@@ -316,7 +325,7 @@ export function TimeClockPanel() {
 
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="tc-store">
-              Store {openShift ? "(from shift)" : ""}
+              Location {openShift ? "(from their open shift)" : ""}
             </label>
             <select
               id="tc-store"
@@ -325,7 +334,7 @@ export function TimeClockPanel() {
               disabled={optionsLoading || Boolean(openShift)}
               className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <option value="">{optionsLoading ? "Loading…" : "Select store"}</option>
+              <option value="">{optionsLoading ? "Loading…" : "Select location"}</option>
               {(options?.stores ?? []).map((store) => (
                 <option key={store.id} value={store.id}>
                   {store.label}
@@ -356,7 +365,7 @@ export function TimeClockPanel() {
                     ? !employeeId
                       ? "Select an employee first"
                       : !storeId && !openShift
-                        ? "Select a store first"
+                        ? "Select a location first"
                         : openShift
                           ? "This employee already has an open shift"
                           : undefined
@@ -429,7 +438,7 @@ export function TimeClockPanel() {
               id="tc-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional note for this event"
+              placeholder="Add a short note if needed (optional)"
               maxLength={240}
             />
           </div>

@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAuditLog, type AuditLogFilters } from "@/lib/api/audit-log";
 import { queryKeys } from "@/lib/query-keys";
 
+import { dataTable } from "@/components/dashboard/data-table-styles";
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,13 +58,13 @@ export function AuditLogView() {
   return (
     <div className="space-y-5">
       <Card className="border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-secondary)] shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
-        <p>
-          Entries are created when people use the time clock or when administrators adjust time.{" "}
-          <span className="font-medium text-[var(--text-primary)]">Administrators</span> and{" "}
-          <span className="font-medium text-[var(--text-primary)]">compliance roles</span> can review this list; other
-          roles may see an access message instead of data.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <SectionHeader
+          className="mb-4"
+          as="h2"
+          title="Search the audit log"
+          description="Pick dates and optional text filters. You only see what your role allows—some people see a message instead of the list."
+        />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="al-from">
               From
@@ -77,13 +79,13 @@ export function AuditLogView() {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="al-entity">
-              Entity contains
+              Record name contains
             </label>
             <Input
               id="al-entity"
               value={entityName}
               onChange={(e) => setEntityName(e.target.value)}
-              placeholder="Record or table name"
+              placeholder="e.g. timesheet, employee"
               disabled={forbidden}
             />
           </div>
@@ -95,7 +97,7 @@ export function AuditLogView() {
               id="al-action"
               value={action}
               onChange={(e) => setAction(e.target.value)}
-              placeholder="e.g. clock in, update"
+              placeholder="e.g. clock in, edited"
               disabled={forbidden}
             />
           </div>
@@ -110,15 +112,13 @@ export function AuditLogView() {
           >
             {isFetching ? "Refreshing…" : "Refresh"}
           </Button>
-          <p className="text-xs text-[var(--text-muted)]">
-            Change dates or filters, then press Refresh to load matching rows.
-          </p>
+          <p className="text-xs text-[var(--text-muted)]">Change filters, then tap Refresh to load results.</p>
         </div>
       </Card>
 
       {isError && !forbidden ? (
         <Card className="border-[var(--border)] p-6 text-sm text-[var(--danger)]">
-          <p>{error instanceof Error ? error.message : "Failed to load audit log."}</p>
+          <p>{error instanceof Error ? error.message : "Could not load the audit log."}</p>
           <Button type="button" variant="outline" className="mt-3 h-9 text-xs" onClick={() => refetch()}>
             Try again
           </Button>
@@ -129,44 +129,49 @@ export function AuditLogView() {
         </Card>
       ) : (
         <Card className="overflow-hidden border-[var(--border)] bg-[var(--surface)] shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
-          <div className="max-h-[min(560px,65vh)] overflow-auto">
+          <div className="border-b border-[var(--border)] px-4 py-4">
+            <SectionHeader
+              as="h2"
+              title="Audit log"
+              description="Who changed what, and when, for time and employee records."
+            />
+          </div>
+          <div className={`mx-4 mb-4 max-h-[min(560px,65vh)] ${dataTable.shell}`}>
             {isLoading ? (
-              <div className="p-10 text-center text-sm text-[var(--text-muted)]">Loading audit log…</div>
+              <div className="p-10 text-center text-sm text-[var(--text-muted)]">Loading…</div>
             ) : rows.length === 0 ? (
               <div className="p-10 text-center text-sm text-[var(--text-secondary)]">
-                No rows for these filters. Try widening the date range or clearing entity/action search.
+                No results for these filters. Try a wider date range or clear the search boxes.
               </div>
             ) : (
-              <table className="w-full min-w-[800px] text-left text-sm">
-                <thead className="sticky top-0 z-[1] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+              <table className={`${dataTable.table} min-w-[800px]`}>
+                <thead className={`${dataTable.thead} sticky top-0 z-[1]`}>
                   <tr>
-                    <th className="px-3 py-2 font-medium">When</th>
-                    <th className="px-3 py-2 font-medium">Actor</th>
-                    <th className="px-3 py-2 font-medium">Entity</th>
-                    <th className="px-3 py-2 font-medium">Action</th>
-                    <th className="px-3 py-2 font-medium">Reason</th>
-                    <th className="px-3 py-2 font-medium">Detail</th>
+                    <th className={dataTable.th}>When</th>
+                    <th className={dataTable.th}>Who</th>
+                    <th className={dataTable.th}>Record</th>
+                    <th className={dataTable.th}>Action</th>
+                    <th className={dataTable.th}>Reason</th>
+                    <th className={dataTable.th}>Detail</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border)]">
+                <tbody className={dataTable.tbody}>
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-[var(--text-secondary)]">
-                        {formatDt(row.createdAt)}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <div className="font-medium text-[var(--text-primary)]">{row.actorName}</div>
+                      <td className={`${dataTable.tdMuted} whitespace-nowrap`}>{formatDt(row.createdAt)}</td>
+                      <td className={dataTable.td}>
+                        <div className="font-medium">{row.actorName}</div>
                         <div className="font-mono text-[10px] text-[var(--text-muted)]">{row.actorUserId.slice(0, 8)}…</div>
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--text-secondary)]">
+                      <td className={dataTable.tdMuted}>
                         <span className="font-medium">{row.entityName}</span>
                         {row.entityId ? (
                           <div className="font-mono text-[10px] text-[var(--text-muted)]">{row.entityId.slice(0, 8)}…</div>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-[var(--text-primary)]">{row.action}</td>
-                      <td className="px-3 py-2.5 text-xs text-[var(--text-muted)]">{row.reasonCode ?? "—"}</td>
-                      <td className="max-w-[240px] px-3 py-2.5 text-xs text-[var(--text-secondary)]">{row.detail}</td>
+                      <td className={`${dataTable.td} font-mono text-xs`}>{row.action}</td>
+                      <td className={`${dataTable.td} text-xs text-[var(--text-muted)]`}>{row.reasonCode ?? "—"}</td>
+                      <td className={`${dataTable.tdMuted} max-w-[240px] text-xs`}>{row.detail}</td>
                     </tr>
                   ))}
                 </tbody>

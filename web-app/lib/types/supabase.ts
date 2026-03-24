@@ -197,6 +197,84 @@ export type Database = {
         }>;
         Relationships: [];
       };
+      pto_requests: {
+        Row: {
+          id: string;
+          employee_id: string;
+          store_id: string;
+          request_type: "vacation" | "sick" | "personal";
+          start_date: string;
+          end_date: string;
+          note: string | null;
+          status: "pending" | "approved" | "denied" | "cancelled";
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          manager_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          employee_id: string;
+          store_id: string;
+          request_type?: "vacation" | "sick" | "personal";
+          start_date: string;
+          end_date: string;
+          note?: string | null;
+          status?: "pending" | "approved" | "denied" | "cancelled";
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          manager_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          note: string | null;
+          status: "pending" | "approved" | "denied" | "cancelled";
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          manager_note: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
+      scheduled_shifts: {
+        Row: {
+          id: string;
+          store_id: string;
+          employee_id: string;
+          start_at: string;
+          end_at: string;
+          shift_template: "morning" | "evening" | "overnight" | "custom";
+          role_label: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          store_id: string;
+          employee_id: string;
+          start_at: string;
+          end_at: string;
+          shift_template?: "morning" | "evening" | "overnight" | "custom";
+          role_label?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<{
+          start_at: string;
+          end_at: string;
+          shift_template: "morning" | "evening" | "overnight" | "custom";
+          role_label: string | null;
+          notes: string | null;
+          updated_at: string;
+        }>;
+        Relationships: [];
+      };
       policy_configs: {
         Row: {
           id: string;

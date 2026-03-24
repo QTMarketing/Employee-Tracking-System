@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { resolveApiDataAccess } from "@/lib/api-data-access";
+import {
+  getLaborEstimateBlendedRateUsd,
+  laborCostsToBarPoints,
+  weightedHoursForLaborEstimate,
+} from "@/lib/labor-estimate";
 import { getMockDashboardCharts } from "@/lib/mock/time-tracking-store";
 import { DashboardChartData } from "@/lib/types/domain";
 
@@ -39,7 +44,8 @@ export async function GET() {
     const storeMap = new Map((stores ?? []).map((store) => [store.id, store.name]));
 
     const lineAgg = new Map<string, { hours: number; ot: number }>();
-    const barAgg = new Map<string, { laborCost: number; laborPct: number }>();
+    const barAgg = new Map<string, number>();
+    const blendedRate = getLaborEstimateBlendedRateUsd();
 
     for (const row of entries ?? []) {
       const date = new Date(row.clock_in_at);
@@ -55,13 +61,9 @@ export async function GET() {
       });
 
       const storeName = storeMap.get(row.store_id) ?? "Store";
-      const weightedHours = hours + ot * 1.5 + dt * 2;
-      const existingStore = barAgg.get(storeName) ?? { laborCost: 0, laborPct: 0 };
-      const nextLaborCost = existingStore.laborCost + weightedHours * 25;
-      barAgg.set(storeName, {
-        laborCost: Math.round(nextLaborCost),
-        laborPct: Math.max(10, Math.min(40, Math.round((nextLaborCost / 400) * 10))),
-      });
+      const weightedHours = weightedHoursForLaborEstimate(hours, ot, dt);
+      const existingCost = barAgg.get(storeName) ?? 0;
+      barAgg.set(storeName, Math.round(existingCost + weightedHours * blendedRate));
     }
 
     const lineData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
@@ -69,11 +71,9 @@ export async function GET() {
       return { day, hours: item.hours, ot: item.ot };
     });
 
-    const barData = Array.from(barAgg.entries()).map(([store, value]) => ({
-      store,
-      laborCost: value.laborCost,
-      laborPct: value.laborPct,
-    }));
+    const barData = laborCostsToBarPoints(
+      Array.from(barAgg.entries()).map(([store, laborCost]) => ({ store, laborCost })),
+    );
 
     const payload: DashboardChartData = { lineData, barData };
     return NextResponse.json({ data: payload });

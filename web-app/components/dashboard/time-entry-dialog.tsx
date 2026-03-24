@@ -23,7 +23,12 @@ const actions = [
   { value: "break_end", label: "Break End" },
 ] as const;
 
-export function TimeEntryDialog() {
+type TimeEntryDialogProps = {
+  /** Extra classes for the trigger button (e.g. top bar sizing). */
+  triggerClassName?: string;
+};
+
+export function TimeEntryDialog({ triggerClassName }: TimeEntryDialogProps) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const form = useForm<TimeEntryForm>({
@@ -78,11 +83,11 @@ export function TimeEntryDialog() {
       if (context?.previousRows) {
         queryClient.setQueryData(queryKeys.timeEntries, context.previousRows);
       }
-      toast.error(error instanceof Error ? error.message : "Failed to save time entry");
+      toast.error(error instanceof Error ? error.message : "Could not save. Try again.");
     },
     onSuccess: (_response, values) => {
       const employeeName = options?.employees.find((employee) => employee.id === values.employeeId)?.label ?? "Employee";
-      toast.success(`Time entry saved for ${employeeName}`);
+      toast.success(`Saved for ${employeeName}`);
       setOpen(false);
       form.reset();
     },
@@ -109,14 +114,14 @@ export function TimeEntryDialog() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button>Add Time Entry</Button>
+        <Button className={triggerClassName}>Record time</Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-[rgba(24,15,32,0.45)] backdrop-blur-sm" />
         <Dialog.Content className="fixed left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl">
-          <Dialog.Title className="text-lg font-semibold text-[var(--text-primary)]">Create Time Entry</Dialog.Title>
+          <Dialog.Title className="text-lg font-semibold text-[var(--text-primary)]">Record time</Dialog.Title>
           <Dialog.Description className="mt-1 text-sm text-[var(--text-secondary)]">
-            Add a manual event on behalf of an employee with proper validation.
+            Record a clock in, break, or clock out for someone else. Notes are optional.
           </Dialog.Description>
 
           <form className="mt-5 space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -140,7 +145,7 @@ export function TimeEntryDialog() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label.Root className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Action</Label.Root>
+                <Label.Root className="text-xs uppercase tracking-wide text-[var(--text-muted)]">What to record</Label.Root>
                 <select
                   {...form.register("action")}
                   className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
@@ -154,12 +159,12 @@ export function TimeEntryDialog() {
               </div>
 
               <div className="space-y-1.5">
-                <Label.Root className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Store</Label.Root>
+                <Label.Root className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Location</Label.Root>
                 <select
                   {...form.register("storeId")}
                   className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[var(--accent)]"
                 >
-                  <option value="">Select store</option>
+                  <option value="">Select location</option>
                   {(options?.stores ?? []).map((store) => (
                     <option key={store.id} value={store.id}>
                       {store.label}
@@ -175,7 +180,7 @@ export function TimeEntryDialog() {
                 {...form.register("notes")}
                 rows={3}
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
-                placeholder="Optional note for the record"
+                placeholder="Optional note"
               />
             </div>
 
@@ -186,7 +191,7 @@ export function TimeEntryDialog() {
                 </Button>
               </Dialog.Close>
               <Button type="submit" disabled={mutation.isPending || isLoadingOptions}>
-                {mutation.isPending ? "Saving..." : isLoadingOptions ? "Loading..." : "Save Entry"}
+                {mutation.isPending ? "Saving…" : isLoadingOptions ? "Loading…" : "Save"}
               </Button>
             </div>
           </form>

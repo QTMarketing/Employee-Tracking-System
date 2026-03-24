@@ -1,7 +1,5 @@
-"use client";
-
-import { HourMixReportView } from "@/components/reports/hour-mix-report-view";
+import { redirect } from "next/navigation";
 
 export default function HourMixReportPage() {
-  return <HourMixReportView />;
+  redirect("/reports?focus=hour-mix");
 }

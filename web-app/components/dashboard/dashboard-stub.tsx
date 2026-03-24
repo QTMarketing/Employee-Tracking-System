@@ -12,7 +12,7 @@ export function DashboardStub({ title, description, bullets }: DashboardStubProp
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">{title}</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">{description}</p>
       </div>
 

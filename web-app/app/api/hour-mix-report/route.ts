@@ -105,7 +105,7 @@ export async function GET() {
       summary,
       generatedAt: new Date().toISOString(),
       scopeDescription:
-        "Totals reflect active shifts only (employees not yet clocked out). Use timesheets for finalized payroll hours.",
+        "These totals are for open shifts only (people not clocked out yet). For finished shifts ready for payroll, use Timesheets.",
       byEmployee,
       byStore,
     };

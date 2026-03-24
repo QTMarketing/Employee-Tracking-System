@@ -9,9 +9,10 @@ import { fetchHourMix } from "@/lib/api/time-entries";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Card } from "@/components/ui/card";
 
-const SEGMENT_COLORS = ["var(--secondary)", "var(--accent)", "var(--info)"];
+const SEGMENT_COLORS = ["var(--secondary)", "var(--accent)", "var(--terracotta)"];
 
 export function HourMixPie({ className }: HTMLAttributes<HTMLDivElement>) {
   const { data, isLoading, isError } = useQuery({
@@ -24,15 +25,19 @@ export function HourMixPie({ className }: HTMLAttributes<HTMLDivElement>) {
 
   return (
     <Card className={cn("flex min-h-0 flex-col", className)}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-[var(--text-primary)]">Hour Mix</h3>
-        <Link
-          href="/reports/hour-mix"
-          className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
-        >
-          View full report
-        </Link>
-      </div>
+      <SectionHeader
+        className="mb-3 shrink-0"
+        title="Hour mix"
+        description="Share of regular, overtime, and double time among people with an open shift."
+        actions={
+          <Link
+            href="/reports?focus=hour-mix"
+            className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
+          >
+            View full report
+          </Link>
+        }
+      />
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 sm:flex-row sm:gap-5">
         <div className="h-44 w-44 shrink-0 min-h-0 sm:h-48 sm:w-48">
           {isLoading ? (

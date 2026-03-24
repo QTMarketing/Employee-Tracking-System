@@ -8,10 +8,16 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { fetchDashboardCharts } from "@/lib/api/time-entries";
 import { queryKeys } from "@/lib/query-keys";
 
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export function LaborByStoreReportView() {
+type LaborByStoreReportViewProps = {
+  /** Hide breadcrumb and “Back to overview” when rendered inside the combined Reports page. */
+  embedded?: boolean;
+};
+
+export function LaborByStoreReportView({ embedded = false }: LaborByStoreReportViewProps) {
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: queryKeys.dashboardCharts,
     queryFn: fetchDashboardCharts,
@@ -52,30 +58,36 @@ export function LaborByStoreReportView() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <nav className="mb-2 text-xs text-[var(--text-muted)]">
-            <Link href="/reports" className="hover:text-[var(--text-primary)]">
-              Reports
-            </Link>
-            <span className="mx-1.5 text-[var(--border)]">/</span>
-            <span className="text-[var(--text-secondary)]">Labor by store</span>
-          </nav>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">
-            Estimated labor cost from current open and active-shift hours. Use this view to compare locations; confirm
-            figures against your payroll process and official rates.
-          </p>
+      {!embedded ? (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <nav className="mb-2 text-xs text-[var(--text-muted)]">
+              <Link href="/reports" className="hover:text-[var(--text-primary)]">
+                Reports
+              </Link>
+              <span className="mx-1.5 text-[var(--border)]">/</span>
+              <span className="text-[var(--text-secondary)]">Labor by store</span>
+            </nav>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">
+              Rough labor cost from current hours and the rates set in the system. Compare locations here, then confirm
+              numbers with your payroll team and official pay rules.
+            </p>
+          </div>
+          <Link
+            href="/overview"
+            className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
+          >
+            Back to overview
+          </Link>
         </div>
-        <Link
-          href="/overview"
-          className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
-        >
-          Back to overview
-        </Link>
-      </div>
+      ) : null}
 
       <Card className="border-[var(--border)] bg-[var(--surface)] p-5">
-        <h2 className="text-base font-semibold text-[var(--text-primary)]">Labor cost</h2>
+        <SectionHeader
+          as="h2"
+          title="Labor cost"
+          description="Estimated cost by location from today’s hours and pay rates. Double-check with payroll before you finalize pay."
+        />
         <div className="mt-4 h-80 min-h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={320}>
             <BarChart data={barData}>
@@ -91,7 +103,7 @@ export function LaborByStoreReportView() {
 
       <Card className="overflow-hidden border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Store breakdown</h2>
+          <h2 className="text-base font-semibold text-[var(--text-primary)]">By location</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px] text-left text-sm">

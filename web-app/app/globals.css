@@ -1,32 +1,45 @@
 @import "tailwindcss";
 
+/**
+ * Design tokens — teal / navy system per style guide.
+ * Primary accent: #0D9488 · Text/ink: #111827 · Category (charts): #C36D4B · Secondary series: #587E78
+ */
 :root {
-  --sidebar-bg: #22182d;
-  --sidebar-hover: #2f2140;
-  /* Strong legacy fill — prefer --sidebar-active-soft + --sidebar-indicator in nav */
-  --sidebar-active: #3c2a53;
-  /* Softer active row: recedes vs main content (KPIs/charts stay hero) */
-  --sidebar-active-soft: color-mix(in oklab, var(--sidebar-hover) 58%, var(--sidebar-bg));
-  --sidebar-indicator: color-mix(in oklab, var(--text-on-dark) 42%, transparent);
-  --sidebar-ink: #f4ecfa;
+  --sidebar-bg: #111827;
+  --sidebar-hover: #1e293b;
+  --sidebar-active-soft: color-mix(in oklab, var(--sidebar-hover) 65%, var(--sidebar-bg));
+  --sidebar-indicator: var(--accent);
+  --sidebar-ink: #f8fafc;
 
-  --board-bg: #f4efe8;
-  --surface: #fffdfa;
-  --surface-soft: #eee5d8;
-  --border: #d3c2ae;
+  --board-bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #e2e8f0;
 
-  --accent: #b8793f;
-  --accent-hover: #a66934;
-  --secondary: #4f8a73;
-  --info: #7f63a8;
-  --success: #3f9160;
-  --warning: #c7852f;
-  --danger: #b64545;
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-foreground: #ffffff;
+  /* Muted green-gray — secondary chart bars, supporting UI */
+  --secondary: #587e78;
+  /* Data series / “second line” — overtime in charts */
+  --terracotta: #c36d4b;
+  /* Informational badges / secondary emphasis (not primary CTA) */
+  --info: #0369a1;
 
-  --text-primary: #241f1b;
-  --text-secondary: #5d5148;
-  --text-muted: #7f7167;
-  --text-on-dark: #f6eefc;
+  --success: #15803d;
+  --warning: #ca8a04;
+  --danger: #b91c1c;
+  --warning-solid: #d97706;
+  --warning-solid-foreground: #0c0a09;
+  --danger-solid: #b91c1c;
+  --danger-solid-foreground: #fff7f7;
+  --attention-panel-bg: color-mix(in oklab, var(--warning) 9%, var(--surface));
+  --attention-panel-border: color-mix(in oklab, var(--warning) 38%, var(--border));
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-on-dark: #f8fafc;
 }
 
 * {
@@ -37,6 +50,6 @@ body {
   margin: 0;
   background: var(--board-bg);
   color: var(--text-primary);
-  font-family: "Inter", "Segoe UI", sans-serif;
+  font-family: var(--font-dashboard), ui-sans-serif, system-ui, sans-serif;
   text-rendering: geometricPrecision;
 }

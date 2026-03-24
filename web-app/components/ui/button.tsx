@@ -3,12 +3,16 @@ import { ButtonHTMLAttributes, forwardRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
+export const buttonVariants = cva(
   "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60",
   {
     variants: {
       variant: {
-        primary: "bg-[var(--accent)] text-[var(--text-on-dark)] hover:bg-[var(--accent-hover)]",
+        primary: "bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-hover)]",
+        warning:
+          "bg-[var(--warning-solid)] font-semibold text-[var(--warning-solid-foreground)] shadow-sm hover:brightness-[0.97]",
+        danger:
+          "bg-[var(--danger-solid)] font-semibold text-[var(--danger-solid-foreground)] shadow-sm hover:brightness-[0.97]",
         outline:
           "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] hover:bg-[var(--surface-soft)]",
         ghost: "text-[var(--text-secondary)] hover:bg-[var(--surface-soft)]",

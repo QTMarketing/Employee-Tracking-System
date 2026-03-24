@@ -39,10 +39,10 @@ export function DevDataBanner() {
       role="status"
       className="border-b border-[color-mix(in_oklab,var(--warning)_35%,var(--border))] bg-[color-mix(in_oklab,var(--warning)_12%,var(--surface))] px-4 py-2 text-center text-xs font-medium text-[var(--text-primary)]"
     >
-      <strong className="font-semibold">Dev mode:</strong>{" "}
+      <strong className="font-semibold">You are viewing sample data</strong> (developers only) —{" "}
       <code className="rounded bg-[var(--surface-soft)] px-1 py-0.5 font-mono text-[11px]">DATA_MODE=api</code> +{" "}
-      {reason} — API routes return <span className="font-semibold">mock data</span> when there is no Supabase session.
-      For production set <code className="rounded bg-[var(--surface-soft)] px-1 py-0.5 font-mono text-[11px]">
+      {reason}. API routes return mock responses when there is no Supabase session.
+      For real data, set <code className="rounded bg-[var(--surface-soft)] px-1 py-0.5 font-mono text-[11px]">
         REQUIRE_SUPABASE_AUTH=true
       </code>{" "}
       and sign in.

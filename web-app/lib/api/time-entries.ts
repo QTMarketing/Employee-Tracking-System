@@ -1,6 +1,7 @@
 import {
   CreateClockEventInput,
   ActiveTimeEntry,
+  ActivityFeedRow,
   DashboardChartData,
   DashboardKpiItem,
   HourMixData,
@@ -21,7 +22,7 @@ type KpiResponse = {
 };
 
 type ActivityResponse = {
-  data: string[];
+  data: ActivityFeedRow[];
 };
 
 type ChartResponse = {
@@ -83,7 +84,7 @@ export async function fetchDashboardKpis(): Promise<DashboardKpiItem[]> {
   return payload.data;
 }
 
-export async function fetchActivityFeed(): Promise<string[]> {
+export async function fetchActivityFeed(): Promise<ActivityFeedRow[]> {
   const response = await fetch("/api/activity-feed", { cache: "no-store" });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;

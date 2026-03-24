@@ -1,4 +1,9 @@
 import {
+  getLaborEstimateBlendedRateUsd,
+  laborCostsToBarPoints,
+  weightedHoursForLaborEstimate,
+} from "@/lib/labor-estimate";
+import {
   ActiveTimeEntry,
   AuditLogRow,
   DashboardChartData,
@@ -7,9 +12,12 @@ import {
   EntryOption,
   HourMixData,
   HourMixReportData,
+  ActivityFeedRow,
   HourMixReportEmployeeRow,
   HourMixReportStoreRow,
   PolicyConfigRow,
+  PtoRequestRow,
+  ScheduledShiftRow,
   TimesheetRow,
 } from "@/lib/types/domain";
 
@@ -79,6 +87,8 @@ const now = new Date();
 const minutesAgo = (m: number) => new Date(now.getTime() - m * 60_000).toISOString();
 const daysAgo = (d: number, hours = 9) =>
   new Date(now.getTime() - d * 86_400_000 - (now.getHours() - hours) * 3_600_000).toISOString();
+const daysFromNow = (d: number, hours = 9) =>
+  new Date(now.getTime() + d * 86_400_000 - (now.getHours() - hours) * 3_600_000).toISOString();
 
 const shifts: InternalShift[] = [
   {
@@ -180,14 +190,6 @@ function nextId(prefix: "shift" | "event"): string {
   return `${prefix}-${base}-${rand}`;
 }
 
-function formatEventLabel(action: EventAction): string {
-  if (action === "clock_in") return "clocked in";
-  if (action === "clock_out") return "clocked out";
-  if (action === "break_start") return "started break";
-  if (action === "break_end") return "ended break";
-  return "added manual event";
-}
-
 function toActiveEntry(shift: InternalShift): ActiveTimeEntry {
   return {
     id: shift.id,
@@ -274,34 +276,156 @@ export function getMockActiveShifts(): ActiveTimeEntry[] {
     .map(toActiveEntry);
 }
 
-export function getMockActivityFeed(): string[] {
-  return events
-    .slice()
-    .sort((a, b) => (a.occurredAt < b.occurredAt ? 1 : -1))
-    .slice(0, 12)
-    .map((event) => {
-      const localTime = new Date(event.occurredAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-      return `${event.employeeName} ${formatEventLabel(event.action)} at ${event.storeName} (${localTime})`;
-    });
+function eventTypeDisplay(action: EventAction): string {
+  if (action === "clock_in") return "Clock in";
+  if (action === "clock_out") return "Clock out";
+  if (action === "break_start") return "Break start";
+  if (action === "break_end") return "Break end";
+  return "Manual adjustment";
+}
+
+function openShiftForEmployee(employeeId: string): InternalShift | undefined {
+  return shifts.find((s) => s.employeeId === employeeId && s.clockOutAt === null);
+}
+
+function shiftStatusLabel(shift: InternalShift | undefined): string {
+  if (!shift) return "—";
+  if (shift.status === "clocked_in") return "Clocked in";
+  if (shift.status === "on_break") return "On break";
+  if (shift.status === "flagged") return "Flagged";
+  return "Clocked out";
+}
+
+function exceptionForEvent(event: EventRecord): string | null {
+  const shift = openShiftForEmployee(event.employeeId);
+  if (shift?.status === "flagged") return "Flagged shift — review hours";
+  if (event.action === "admin_manual") return "Manual time correction";
+  if (shift && shift.otHours > 0) return "Overtime on open shift";
+  return null;
+}
+
+export function getMockActivityFeedRows(): ActivityFeedRow[] {
+  const rows: ActivityFeedRow[] = events.map((event) => {
+    const shift = openShiftForEmployee(event.employeeId);
+    return {
+      id: event.id,
+      employeeName: event.employeeName,
+      eventType: eventTypeDisplay(event.action),
+      eventTypeKey: event.action,
+      occurredAt: event.occurredAt,
+      shiftStatus: shiftStatusLabel(shift),
+      exception: exceptionForEvent(event),
+      storeName: event.storeName,
+    };
+  });
+
+  return rows
+    .sort((a, b) => {
+      const crit = (a.exception ? 1 : 0) - (b.exception ? 1 : 0);
+      if (crit !== 0) return -crit;
+      return a.occurredAt < b.occurredAt ? 1 : -1;
+    })
+    .slice(0, 12);
 }
 
 export function getMockKpis(): DashboardKpiItem[] {
   const activeCount = getMockActiveShifts().length;
-  const flaggedCount = shifts.filter((shift) => shift.status === "flagged" && shift.clockOutAt === null).length;
-  const manualCount24h = events.filter((event) => event.action === "admin_manual").length;
+  const flaggedOpen = shifts.filter((shift) => shift.status === "flagged" && shift.clockOutAt === null);
+  const flaggedCount = flaggedOpen.length;
+  const firstFlagged = flaggedOpen[0];
   const totalHours = shifts
     .filter((shift) => shift.clockOutAt === null)
     .reduce((sum, shift) => sum + shift.regularHours + shift.otHours + shift.dtHours, 0);
 
+  const end = new Date();
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - 14);
+  const sheetRows = getMockTimesheetRows({
+    from: start.toISOString().slice(0, 10),
+    to: end.toISOString().slice(0, 10),
+  });
+  const pendingPayrollRows = sheetRows.filter((r) => !r.payrollApprovedAt);
+  const pendingPayrollCount = pendingPayrollRows.length;
+  const payrollPreviewRow = pendingPayrollRows.sort((a, b) =>
+    a.clockInAt < b.clockInAt ? -1 : a.clockInAt > b.clockInAt ? 1 : 0,
+  )[0];
+  const payrollPreview =
+    payrollPreviewRow !== undefined
+      ? `${payrollPreviewRow.employeeName} · ${payrollPreviewRow.storeName} · earliest unapproved in range`
+      : undefined;
+
+  const flaggedPreview =
+    flaggedCount > 0 && firstFlagged
+      ? `${firstFlagged.employeeName} · ${firstFlagged.storeName} · open flagged shift`
+      : undefined;
+
   return [
-    { label: "Currently Clocked In", value: String(activeCount), change: "Demo data", tone: "primary" },
-    { label: "Pending Approvals", value: String(manualCount24h), change: "Demo data", tone: "warning" },
-    { label: "Flagged Short Entries", value: String(flaggedCount), change: "Demo data", tone: "accent" },
     {
-      label: "Total Hours Today",
+      key: "pending_approvals",
+      label: "Pending payroll approval",
+      value: String(pendingPayrollCount),
+      change: "Closed shifts from the last 14 days not yet marked approved on Timesheets",
+      tone: "warning",
+      preview: payrollPreview,
+      ctaHref: "/timesheets",
+      ctaLabel: "Open timesheets",
+    },
+    {
+      key: "flagged_short_entries",
+      label: "Flagged entries",
+      value: String(flaggedCount),
+      change: "Needs a closer look",
+      tone: "danger",
+      preview: flaggedPreview,
+      ctaHref: "/time-clock",
+      ctaLabel: "Open time clock",
+    },
+    {
+      key: "clocked_in",
+      label: "Currently clocked in",
+      value: String(activeCount),
+      change: "Clocked in or on break right now",
+      tone: "primary",
+      ctaHref: "/time-clock",
+      ctaLabel: "Open time clock",
+    },
+    {
+      key: "total_hours_today",
+      label: "Total hours today",
       value: Intl.NumberFormat("en-US").format(Math.round(totalHours * 100) / 100),
-      change: "Demo data",
+      change: "Clocked in today (UTC day); includes people who already clocked out",
       tone: "success",
+      ctaHref: "/timesheets",
+      ctaLabel: "Open timesheets",
+    },
+    {
+      key: "profile_gaps",
+      label: "Profile gaps",
+      value: "2",
+      change: "Active employees missing a store assignment or hourly rate in their profile",
+      tone: "warning",
+      preview: "Ronald Richards · +1 more · missing store or pay rate",
+      ctaHref: "/employees",
+      ctaLabel: "Open employees",
+    },
+    {
+      key: "active_stores",
+      label: "Active locations",
+      value: String(stores.length),
+      change: "Stores available for assignments and time rules",
+      tone: "primary",
+      ctaHref: "/settings",
+      ctaLabel: "Time rules",
+    },
+    {
+      key: "overtime_hours_7d",
+      label: "OT hours (7d)",
+      value: Intl.NumberFormat("en-US").format(12.5),
+      change: "Overtime hours recorded on shifts clocked in during the last 7 UTC days",
+      tone: "accent",
+      preview: "12.5h OT · 3 shifts in last 7 days",
+      ctaHref: "/reports?focus=labor",
+      ctaLabel: "Labor report",
     },
   ];
 }
@@ -317,22 +441,17 @@ export function getMockDashboardCharts(): DashboardChartData {
     { day: "Sun", hours: 145, ot: 11 },
   ];
 
-  const storeHours = new Map<string, { laborCost: number; laborPct: number }>();
+  const rate = getLaborEstimateBlendedRateUsd();
+  const storeHours = new Map<string, number>();
   for (const shift of shifts) {
-    const current = storeHours.get(shift.storeName) ?? { laborCost: 0, laborPct: 0 };
-    const totalHours = shift.regularHours + shift.otHours * 1.5 + shift.dtHours * 2;
-    const nextCost = current.laborCost + totalHours * 25;
-    storeHours.set(shift.storeName, {
-      laborCost: Math.round(nextCost),
-      laborPct: Math.max(10, Math.min(40, Math.round((nextCost / 400) * 10))),
-    });
+    const current = storeHours.get(shift.storeName) ?? 0;
+    const weighted = weightedHoursForLaborEstimate(shift.regularHours, shift.otHours, shift.dtHours);
+    storeHours.set(shift.storeName, Math.round(current + weighted * rate));
   }
 
-  const barData = Array.from(storeHours.entries()).map(([store, value]) => ({
-    store,
-    laborCost: value.laborCost,
-    laborPct: value.laborPct,
-  }));
+  const barData = laborCostsToBarPoints(
+    Array.from(storeHours.entries()).map(([store, laborCost]) => ({ store, laborCost })),
+  );
 
   return { lineData, barData };
 }
@@ -411,7 +530,7 @@ export function getMockHourMixReport(): HourMixReportData {
     summary,
     generatedAt: new Date().toISOString(),
     scopeDescription:
-      "Totals reflect active shifts only (employees not yet clocked out). Use timesheets for finalized payroll hours.",
+      "These totals are for open shifts only (people not clocked out yet). For finished shifts ready for payroll, use Timesheets.",
     byEmployee,
     byStore,
   };
@@ -429,6 +548,10 @@ export function applyMockClockEvent(input: {
   if (input.action === "clock_in") {
     if (existingActive) {
       throw new Error("Cannot clock in while an active shift exists.");
+    }
+
+    if (!clockInAllowedByScheduleMock(input.employeeId, input.storeId, new Date(occurredAt))) {
+      throw new Error(SCHEDULE_CLOCK_IN_WINDOW_MESSAGE);
     }
 
     shifts.unshift({
@@ -486,6 +609,27 @@ export function applyMockClockEvent(input: {
   });
 
   return { eventId };
+}
+
+const SCHEDULE_CLOCK_IN_WINDOW_MESSAGE =
+  "Clock-in is only allowed from 5 minutes before your scheduled shift start until the shift ends";
+
+/** Matches SQL: if no nearby scheduled shift, allow; else require punch in [start−5m, end). */
+function clockInAllowedByScheduleMock(employeeId: string, storeId: string, at: Date): boolean {
+  const atMs = at.getTime();
+  const all = getMockScheduledShifts();
+  const candidates = all.filter(
+    (s) =>
+      s.employeeId === employeeId &&
+      s.storeId === storeId &&
+      new Date(s.endAt).getTime() > atMs - 60 * 60 * 1000 &&
+      new Date(s.startAt).getTime() < atMs + 24 * 60 * 60 * 1000,
+  );
+  if (candidates.length === 0) return true;
+  return candidates.some(
+    (s) =>
+      atMs >= new Date(s.startAt).getTime() - 5 * 60 * 1000 && atMs < new Date(s.endAt).getTime(),
+  );
 }
 
 const mockTimesheetRows: TimesheetRow[] = [
@@ -699,4 +843,136 @@ export function getMockPolicyConfigs(): PolicyConfigRow[] {
     const patch = mockPolicyPatchesById.get(id);
     return patch ? { ...base, ...patch } : base;
   });
+}
+
+const mockPtoRequests: PtoRequestRow[] = [
+  {
+    id: "pto-mock-001",
+    employeeId: employees[0]!.id,
+    employeeName: employees[0]!.label,
+    employeeCode: "EMP-1007",
+    storeId: stores[0]!.id,
+    storeName: stores[0]!.label,
+    requestType: "vacation",
+    startDate: daysFromNow(5, 12).slice(0, 10),
+    endDate: daysFromNow(7, 12).slice(0, 10),
+    note: "Family trip",
+    status: "pending",
+    reviewedById: null,
+    reviewedByName: null,
+    reviewedAt: null,
+    managerNote: null,
+    createdAt: minutesAgo(120),
+    updatedAt: minutesAgo(120),
+  },
+  {
+    id: "pto-mock-002",
+    employeeId: employees[1]!.id,
+    employeeName: employees[1]!.label,
+    employeeCode: "EMP-1023",
+    storeId: stores[2]!.id,
+    storeName: stores[2]!.label,
+    requestType: "sick",
+    startDate: daysAgo(2, 12).slice(0, 10),
+    endDate: daysAgo(2, 12).slice(0, 10),
+    note: null,
+    status: "approved",
+    reviewedById: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    reviewedByName: "Dev Admin",
+    reviewedAt: daysAgo(1, 10),
+    managerNote: "Feel better",
+    createdAt: daysAgo(3, 9),
+    updatedAt: daysAgo(1, 10),
+  },
+];
+
+const mockScheduledShifts: ScheduledShiftRow[] = (() => {
+  const s = new Date(daysFromNow(1, 9));
+  const e = new Date(daysFromNow(1, 17));
+  return [
+    {
+      id: "sch-mock-001",
+      storeId: stores[0]!.id,
+      storeName: stores[0]!.label,
+      employeeId: employees[0]!.id,
+      employeeName: employees[0]!.label,
+      employeeCode: "EMP-1007",
+      startAt: s.toISOString(),
+      endAt: e.toISOString(),
+      shiftTemplate: "morning",
+      roleLabel: "Cashier",
+      notes: null,
+      createdAt: daysAgo(1, 15),
+      updatedAt: daysAgo(1, 15),
+    },
+    {
+      id: "sch-mock-002",
+      storeId: stores[1]!.id,
+      storeName: stores[1]!.label,
+      employeeId: employees[2]!.id,
+      employeeName: employees[2]!.label,
+      employeeCode: "EMP-1040",
+      startAt: new Date(daysFromNow(2, 14)).toISOString(),
+      endAt: new Date(daysFromNow(2, 22)).toISOString(),
+      shiftTemplate: "evening",
+      roleLabel: "Shift lead",
+      notes: "Close",
+      createdAt: daysAgo(1, 15),
+      updatedAt: daysAgo(1, 15),
+    },
+  ];
+})();
+
+export function getMockPtoRequests(): PtoRequestRow[] {
+  return [...mockPtoRequests].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function appendMockPtoRequest(row: PtoRequestRow) {
+  mockPtoRequests.unshift(row);
+  return row.id;
+}
+
+export function patchMockPtoRequest(
+  id: string,
+  patch: Partial<
+    Pick<PtoRequestRow, "status" | "managerNote" | "reviewedById" | "reviewedByName" | "reviewedAt" | "updatedAt">
+  >,
+) {
+  const idx = mockPtoRequests.findIndex((r) => r.id === id);
+  if (idx === -1) throw new Error("PTO request not found");
+  const cur = mockPtoRequests[idx]!;
+  mockPtoRequests[idx] = {
+    ...cur,
+    ...patch,
+    updatedAt: patch.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+export function getMockScheduledShifts(filters?: { storeId?: string; from?: string; to?: string }): ScheduledShiftRow[] {
+  let list = [...mockScheduledShifts];
+  if (filters?.storeId) {
+    list = list.filter((r) => r.storeId === filters.storeId);
+  }
+  if (filters?.from) {
+    const fromT = new Date(`${filters.from}T00:00:00.000Z`).getTime();
+    list = list.filter((r) => new Date(r.endAt).getTime() > fromT);
+  }
+  if (filters?.to) {
+    const end = new Date(`${filters.to}T00:00:00.000Z`);
+    end.setUTCDate(end.getUTCDate() + 1);
+    const toT = end.getTime();
+    list = list.filter((r) => new Date(r.startAt).getTime() < toT);
+  }
+  return list.sort((a, b) => (a.startAt < b.startAt ? -1 : 1));
+}
+
+export function appendMockScheduledShift(row: ScheduledShiftRow) {
+  mockScheduledShifts.push(row);
+  return row.id;
+}
+
+export function deleteMockScheduledShift(id: string) {
+  const idx = mockScheduledShifts.findIndex((r) => r.id === id);
+  if (idx === -1) throw new Error("Shift not found");
+  mockScheduledShifts.splice(idx, 1);
 }

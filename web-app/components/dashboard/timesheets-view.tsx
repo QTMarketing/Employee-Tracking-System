@@ -7,11 +7,14 @@ import { toast } from "sonner";
 import { fetchTimeEntryOptions } from "@/lib/api/time-entries";
 import { submitPayrollApproval } from "@/lib/api/payroll";
 import { fetchTimesheets } from "@/lib/api/timesheets";
-import { timesheetsToCsv } from "@/lib/csv";
+import { downloadCsvString, timesheetsToCsv } from "@/lib/csv";
 import { PAY_PERIOD_LABELS, payPeriodRange, type PayPeriodPreset } from "@/lib/pay-period";
 import { queryKeys } from "@/lib/query-keys";
+import { isActiveShiftAlert } from "@/lib/shift-attention";
 import type { TimesheetRow } from "@/lib/types/domain";
 
+import { dataTable } from "@/components/dashboard/data-table-styles";
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,10 +27,11 @@ function statusLabel(status: TimesheetRow["status"]): string {
   return "Open";
 }
 
-function statusTone(status: TimesheetRow["status"]): "primary" | "warning" | "success" {
-  if (status === "flagged") return "warning";
+function statusTone(status: TimesheetRow["status"]): "alert" | "success" | "neutral" | "primary" {
+  if (isActiveShiftAlert(status)) return "alert";
   if (status === "clocked_out") return "success";
-  return "primary";
+  if (status === "clocked_in") return "primary";
+  return "neutral";
 }
 
 function formatDt(iso: string): string {
@@ -49,16 +53,6 @@ function defaultDateRange() {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10),
   };
-}
-
-function downloadCsv(filename: string, content: string) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 export function TimesheetsView() {
@@ -91,13 +85,14 @@ export function TimesheetsView() {
     mutationFn: submitPayrollApproval,
     onSuccess: async (res, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["timesheets"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboardKpis });
       const ids = variables.timeEntryIds;
       if (res.updated > 0) {
         if (ids.length === 1) {
           const row = rows.find((r) => r.id === ids[0]);
           const name = row?.employeeName ?? "Employee";
           toast.success(
-            variables.approved ? `Payroll approved for ${name}` : `Payroll approval removed for ${name}`,
+            variables.approved ? `Marked approved for payroll: ${name}` : `Removed payroll approval: ${name}`,
           );
         } else {
           toast.success(`Updated ${res.updated} row(s)`);
@@ -120,14 +115,20 @@ export function TimesheetsView() {
     }
     const safeFrom = from || "all";
     const safeTo = to || "all";
-    downloadCsv(`timesheets-${safeFrom}-${safeTo}.csv`, timesheetsToCsv(rows));
+    downloadCsvString(`timesheets-${safeFrom}-${safeTo}.csv`, timesheetsToCsv(rows));
     toast.success("Download started");
   }
 
   return (
     <div className="space-y-5">
       <Card className="border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
-        <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Pay period presets</p>
+        <SectionHeader
+          className="mb-4"
+          as="h2"
+          title="Dates and locations"
+          description="Choose a quick pay-period shortcut or set dates yourself, pick locations, then Refresh. Open shifts stay on Overview and Time clock until someone clocks out."
+        />
+        <p className="text-xs uppercase tracking-wide text-[var(--text-muted)]">Quick date ranges</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {(Object.keys(PAY_PERIOD_LABELS) as PayPeriodPreset[]).map((preset) => (
             <Button key={preset} type="button" variant="outline" className="h-8 text-xs" onClick={() => applyPreset(preset)}>
@@ -140,7 +141,7 @@ export function TimesheetsView() {
           <div className="grid flex-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <label className="text-xs uppercase tracking-wide text-[var(--text-muted)]" htmlFor="ts-store">
-                Store
+                Location
               </label>
               <select
                 id="ts-store"
@@ -182,7 +183,7 @@ export function TimesheetsView() {
 
       {isError ? (
         <Card className="border-[var(--border)] p-6 text-sm text-[var(--danger)]">
-          {error instanceof Error ? error.message : "Failed to load timesheets."}
+          {error instanceof Error ? error.message : "Could not load timesheets."}
         </Card>
       ) : (
         <Card className="relative overflow-hidden border-[var(--border)] bg-[var(--surface)] shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
@@ -191,47 +192,55 @@ export function TimesheetsView() {
               className="absolute inset-x-0 top-0 z-[2] border-b border-[color-mix(in_oklab,var(--accent)_25%,var(--border))] bg-[color-mix(in_oklab,var(--accent)_10%,var(--surface))] py-1.5 text-center text-xs font-medium text-[var(--text-secondary)]"
               role="status"
             >
-              Updating results…
+              Updating…
             </div>
           ) : null}
-          <div className="max-h-[min(560px,65vh)] overflow-auto">
+          <div className="border-b border-[var(--border)] px-4 py-4">
+            <SectionHeader
+              as="h2"
+              title="Timesheet rows"
+              description="Finished shifts with regular, overtime, and double time. Approve here before payroll, or download a file."
+            />
+          </div>
+          <div className={`mx-4 mb-4 max-h-[min(560px,65vh)] ${dataTable.shell}`}>
             {isLoading ? (
-              <div className="p-10 text-center text-sm text-[var(--text-muted)]">Loading timesheets…</div>
+              <div className="p-10 text-center text-sm text-[var(--text-muted)]">Loading…</div>
             ) : rows.length === 0 ? (
               <div className="p-10 text-center text-sm text-[var(--text-secondary)]">
-                No closed shifts in this range. Open shifts stay on Overview / Time clock until clocked out.
+                No finished shifts in this date range. Open shifts stay on Overview and Time clock until someone clocks
+                out.
               </div>
             ) : (
-              <table className="w-full min-w-[920px] text-left text-sm">
-                <thead className="sticky top-0 z-[1] bg-[var(--surface-soft)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+              <table className={`${dataTable.table} min-w-[920px]`}>
+                <thead className={`${dataTable.thead} sticky top-0 z-[1]`}>
                   <tr>
-                    <th className="px-3 py-2 font-medium">Employee</th>
-                    <th className="px-3 py-2 font-medium">Store</th>
-                    <th className="px-3 py-2 font-medium">Clock in</th>
-                    <th className="px-3 py-2 font-medium">Clock out</th>
-                    <th className="px-3 py-2 font-medium">Reg / OT / DT</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
-                    <th className="px-3 py-2 font-medium">Payroll</th>
-                    <th className="px-3 py-2 font-medium">Actions</th>
+                    <th className={dataTable.th}>Employee</th>
+                    <th className={dataTable.th}>Store</th>
+                    <th className={dataTable.th}>Clock in</th>
+                    <th className={dataTable.th}>Clock out</th>
+                    <th className={dataTable.th}>Regular / OT / double time</th>
+                    <th className={dataTable.th}>Status</th>
+                    <th className={dataTable.th}>Payroll approval</th>
+                    <th className={dataTable.th}>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border)]">
+                <tbody className={dataTable.tbody}>
                   {rows.map((row) => (
                     <tr key={row.id}>
-                      <td className="px-3 py-2.5">
-                        <div className="font-medium text-[var(--text-primary)]">{row.employeeName}</div>
+                      <td className={dataTable.td}>
+                        <div className="font-medium">{row.employeeName}</div>
                         <div className="text-xs text-[var(--text-muted)]">{row.employeeCode}</div>
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--text-secondary)]">{row.storeName}</td>
-                      <td className="px-3 py-2.5 text-[var(--text-secondary)]">{formatDt(row.clockInAt)}</td>
-                      <td className="px-3 py-2.5 text-[var(--text-secondary)]">{formatDt(row.clockOutAt)}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-[var(--text-secondary)]">
+                      <td className={dataTable.tdMuted}>{row.storeName}</td>
+                      <td className={dataTable.tdMuted}>{formatDt(row.clockInAt)}</td>
+                      <td className={dataTable.tdMuted}>{formatDt(row.clockOutAt)}</td>
+                      <td className={`${dataTable.tdMuted} font-mono text-xs`}>
                         {row.regularHours} / {row.otHours} / {row.dtHours}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className={dataTable.td}>
                         <Badge tone={statusTone(row.status)}>{statusLabel(row.status)}</Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-[var(--text-secondary)]">
+                      <td className={`${dataTable.tdMuted} text-xs`}>
                         {row.payrollApprovedAt ? (
                           <span>
                             ✓ {formatDt(row.payrollApprovedAt)}
@@ -243,7 +252,7 @@ export function TimesheetsView() {
                           <span className="text-[var(--text-muted)]">Pending</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5">
+                      <td className={dataTable.td}>
                         <div className="flex flex-wrap gap-1">
                           <Button
                             type="button"
@@ -262,7 +271,7 @@ export function TimesheetsView() {
                             onClick={() => {
                               if (
                                 !window.confirm(
-                                  `Remove payroll approval for ${row.employeeName}? You can approve again later.`,
+                                  `Remove the payroll OK for ${row.employeeName}? You can approve again later.`,
                                 )
                               ) {
                                 return;
@@ -270,7 +279,7 @@ export function TimesheetsView() {
                               payrollMutation.mutate({ timeEntryIds: [row.id], approved: false });
                             }}
                           >
-                            Revoke
+                            Remove approval
                           </Button>
                         </div>
                       </td>

@@ -14,4 +14,7 @@ export const queryKeys = {
   dashboardCharts: ["dashboard-charts"] as const,
   hourMix: ["hour-mix"] as const,
   hourMixReport: ["hour-mix-report"] as const,
+  ptoRequests: ["pto-requests"] as const,
+  scheduledShifts: (filters: { storeId?: string; from?: string; to?: string }) =>
+    ["scheduled-shifts", filters.storeId ?? "", filters.from ?? "", filters.to ?? ""] as const,
 };

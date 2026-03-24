@@ -20,10 +20,11 @@ import { fetchHourMixReport } from "@/lib/api/time-entries";
 import { queryKeys } from "@/lib/query-keys";
 import { TimeEntryStatus } from "@/lib/types/domain";
 
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-const SEGMENT_COLORS = ["var(--secondary)", "var(--accent)", "var(--info)"] as const;
+const SEGMENT_COLORS = ["var(--secondary)", "var(--accent)", "var(--terracotta)"] as const;
 
 function statusLabel(status: TimeEntryStatus): string {
   switch (status) {
@@ -54,7 +55,12 @@ function StatusBadge({ status }: { status: TimeEntryStatus }) {
   );
 }
 
-export function HourMixReportView() {
+type HourMixReportViewProps = {
+  /** Hide breadcrumb and “Back to overview” when rendered inside the combined Reports page. */
+  embedded?: boolean;
+};
+
+export function HourMixReportView({ embedded = false }: HourMixReportViewProps) {
   const [activeSlice, setActiveSlice] = useState<number | null>(null);
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: queryKeys.hourMixReport,
@@ -101,25 +107,34 @@ export function HourMixReportView() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <nav className="mb-2 text-xs text-[var(--text-muted)]">
-            <Link href="/reports" className="hover:text-[var(--text-primary)]">
-              Reports
-            </Link>
-            <span className="mx-1.5 text-[var(--border)]">/</span>
-            <span className="text-[var(--text-secondary)]">Hour mix</span>
-          </nav>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">{data.scopeDescription}</p>
-          <p className="mt-2 text-xs text-[var(--text-muted)]">Generated {generatedLabel}</p>
+      {embedded ? (
+        <div className="flex flex-col gap-1 border-b border-[var(--border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="max-w-2xl text-sm text-[var(--text-secondary)]">{data.scopeDescription}</p>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">Generated {generatedLabel}</p>
+          </div>
         </div>
-        <Link
-          href="/overview"
-          className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
-        >
-          Back to overview
-        </Link>
-      </div>
+      ) : (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <nav className="mb-2 text-xs text-[var(--text-muted)]">
+              <Link href="/reports" className="hover:text-[var(--text-primary)]">
+                Reports
+              </Link>
+              <span className="mx-1.5 text-[var(--border)]">/</span>
+              <span className="text-[var(--text-secondary)]">Hour mix</span>
+            </nav>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--text-secondary)]">{data.scopeDescription}</p>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">Generated {generatedLabel}</p>
+          </div>
+          <Link
+            href="/overview"
+            className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] hover:bg-[var(--surface-soft)]"
+          >
+            Back to overview
+          </Link>
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-[var(--border)] bg-[var(--surface)] p-4">
@@ -143,8 +158,11 @@ export function HourMixReportView() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card className="flex flex-col border-[var(--border)] bg-[var(--surface)] p-5">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">Composition</h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">Click a slice to highlight; click again to clear.</p>
+          <SectionHeader
+            as="h2"
+            title="Overall mix"
+            description="How hours split between regular time, overtime, and double time for everyone in this report."
+          />
           <div className="mt-4 h-72 min-h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
               <PieChart>
@@ -177,12 +195,15 @@ export function HourMixReportView() {
         </Card>
 
         <Card className="flex flex-col border-[var(--border)] bg-[var(--surface)] p-5">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">By store</h2>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">Stacked regular, OT, and DT for active shifts.</p>
+          <SectionHeader
+            as="h2"
+            title="By location"
+            description="Same hour types, broken out by work location."
+          />
           <div className="mt-4 h-72 min-h-[280px] w-full">
             {byStoreChart.length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-                No active shifts in scope.
+                No open shifts match this report.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
@@ -199,7 +220,7 @@ export function HourMixReportView() {
                   <Tooltip />
                   <Bar dataKey="regularHours" stackId="mix" fill="var(--secondary)" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="otHours" stackId="mix" fill="var(--accent)" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="dtHours" stackId="mix" fill="var(--info)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="dtHours" stackId="mix" fill="var(--terracotta)" radius={[0, 0, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -209,8 +230,11 @@ export function HourMixReportView() {
 
       <Card className="overflow-hidden border-[var(--border)] bg-[var(--surface)]">
         <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 className="text-base font-semibold text-[var(--text-primary)]">By employee</h2>
-          <p className="mt-0.5 text-xs text-[var(--text-muted)]">Active shifts with current hour buckets.</p>
+          <SectionHeader
+            as="h2"
+            title="By employee"
+            description="Hours and status for each person—useful for payroll review."
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">

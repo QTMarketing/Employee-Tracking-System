@@ -1,7 +1,5 @@
-"use client";
-
-import { LaborByStoreReportView } from "@/components/reports/labor-by-store-report-view";
+import { redirect } from "next/navigation";
 
 export default function LaborByStoreReportPage() {
-  return <LaborByStoreReportView />;
+  redirect("/reports?focus=labor");
 }

@@ -16,6 +16,7 @@ Open [http://localhost:3000](http://localhost:3000) (default port; use the URL s
 
 ## Documentation
 
+- **[docs/PRD.md](./docs/PRD.md)** — Product requirements (workforce dashboard vision) and **§7 implementation snapshot** vs this repo.
 - **[docs/dev.md](./docs/dev.md)** — `DATA_MODE`, `REQUIRE_SUPABASE_AUTH`, `ALLOW_UNAUTHENTICATED_DEV`, production checklist, and how to tell mock vs live data.
 - **[docs/phase-c.md](./docs/phase-c.md)** — sign-in, seed SQL (`supabase/seed-dev.sql`), and verifying real API data.
 - **[docs/phase-d.md](./docs/phase-d.md)** — Time clock (`/time-clock`), store-scoped roster (`/employees`), APIs, and verification.

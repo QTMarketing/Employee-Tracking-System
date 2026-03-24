@@ -33,8 +33,9 @@ export async function POST(request: Request) {
         p_employee_id: input.employeeId,
         p_store_id: input.storeId,
         p_event_type: input.action,
-        p_method: "admin_manual",
-        p_reason: "MANUAL_ENTRY",
+        /** `personal` so scheduled-shift early clock-in rules apply; use admin_manual only for true overrides (requires reason). */
+        p_method: "personal",
+        p_reason: null,
         p_note: input.notes ?? null,
       } as never,
     );
@@ -48,7 +49,12 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? "Invalid payload" }, { status: 400 });
     }
-    if (error instanceof Error && (error.message.startsWith("Cannot") || error.message.includes("active shift"))) {
+    if (
+      error instanceof Error &&
+      (error.message.startsWith("Cannot") ||
+        error.message.includes("active shift") ||
+        error.message.includes("Clock-in is only allowed"))
+    ) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     const message = error instanceof Error ? error.message : "Unexpected server error";

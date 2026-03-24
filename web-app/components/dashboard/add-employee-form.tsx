@@ -12,6 +12,7 @@ import type { EntryOption } from "@/lib/types/domain";
 
 const EMPTY_STORES: EntryOption[] = [];
 
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -79,7 +80,7 @@ export function AddEmployeeForm() {
     e.preventDefault();
     const storeIds = selectedInListOrder.map((s) => s.id);
     if (storeIds.length === 0) {
-      toast.error("Select at least one store");
+      toast.error("Select at least one location");
       return;
     }
     const primary =
@@ -109,18 +110,18 @@ export function AddEmployeeForm() {
   if (!isAdmin) {
     return (
       <Card className="border-[var(--border)] bg-[var(--surface)] p-4 text-sm text-[var(--text-secondary)]">
-        Your role doesn&apos;t include adding employees here. Ask a workspace admin to create the account or assign
-        you admin access.
+        You can&apos;t add employees with your current role. Ask an admin to create the account or give you admin
+        access.
       </Card>
     );
   }
 
   return (
     <Card className="border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_12px_32px_rgba(34,22,42,0.06)]">
-      <p className="text-sm text-[var(--text-secondary)]">
-        Fill in their details, choose which locations they work at, then submit. If creation fails, your workspace may
-        not be set up for account creation yet — ask the person who manages your system.
-      </p>
+      <SectionHeader
+        title="Account and locations"
+        description="Enter their details, choose where they can clock in, and submit. If it fails, your setup may not allow creating accounts—ask your IT or admin contact."
+      />
 
       <form className="mt-4 space-y-4" onSubmit={onSubmit}>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -135,7 +136,7 @@ export function AddEmployeeForm() {
               onChange={(e) => setEmployeeCode(e.target.value)}
               required
               pattern="[A-Za-z0-9_-]{2,32}"
-              title="Letters, numbers, hyphen, underscore (2–32 chars)"
+              title="Use 2–32 characters: letters, numbers, dash, or underscore"
             />
           </div>
           <div className="space-y-1.5">
@@ -174,7 +175,7 @@ export function AddEmployeeForm() {
             ))}
           </div>
           {storeList.length === 0 ? (
-            <p className="text-xs text-[var(--warning)]">No locations available to assign. Check your admin store access.</p>
+            <p className="text-xs text-[var(--warning)]">No locations available. Check that your admin account has locations assigned.</p>
           ) : null}
         </div>
 

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  CalendarDays,
   Clock3,
   FileSpreadsheet,
   LayoutDashboard,
+  TreePalm,
   Settings,
   ShieldCheck,
   Users,
@@ -14,11 +16,13 @@ import {
 
 const nav = [
   { label: "Overview", href: "/overview", icon: LayoutDashboard },
-  { label: "Time Clock", href: "/time-clock", icon: Clock3 },
   { label: "Employees", href: "/employees", icon: Users },
+  { label: "Schedules", href: "/schedules", icon: CalendarDays },
+  { label: "Time clock", href: "/time-clock", icon: Clock3 },
   { label: "Timesheets", href: "/timesheets", icon: FileSpreadsheet },
+  { label: "PTO", href: "/pto", icon: TreePalm },
   { label: "Reports", href: "/reports", icon: BarChart3 },
-  { label: "Audit Log", href: "/audit-log", icon: ShieldCheck },
+  { label: "Audit log", href: "/audit-log", icon: ShieldCheck },
 ];
 
 function isRouteActive(pathname: string, href: string): boolean {
@@ -37,15 +41,15 @@ export function Sidebar({ showLogout = true }: SidebarProps) {
   const pathname = usePathname() ?? "/";
 
   return (
-    <aside className="sticky top-0 flex min-h-0 w-72 shrink-0 flex-col self-stretch overflow-hidden border-r border-[color-mix(in_oklab,var(--sidebar-ink)_16%,transparent)] bg-[var(--sidebar-bg)] px-4 py-6 text-[var(--text-on-dark)]">
-      <div className="mb-7 px-3">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-[color-mix(in_oklab,var(--text-on-dark)_50%,transparent)]">
-          HR System
+    <aside className="sticky top-0 flex h-dvh w-64 shrink-0 flex-col self-start overflow-x-hidden overflow-y-auto border-r border-[color-mix(in_oklab,var(--sidebar-ink)_22%,transparent)] bg-[var(--sidebar-bg)] px-3 py-6 text-[var(--text-on-dark)] shadow-[2px_0_20px_rgba(0,0,0,0.08)] lg:w-72 lg:px-4">
+      <div className="mb-6 shrink-0 px-2 lg:mb-7 lg:px-3">
+        <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[color-mix(in_oklab,var(--text-on-dark)_48%,transparent)]">
+          Workforce
         </p>
-        <h1 className="mt-1 text-lg font-semibold tracking-tight">Workspace</h1>
+        <h1 className="mt-1 text-base font-semibold tracking-tight lg:text-lg">HR System</h1>
       </div>
 
-      <nav className="space-y-1.5">
+      <nav className="min-h-0 flex-1 space-y-1.5">
         {nav.map((item) => {
           const Icon = item.icon;
           const active = isRouteActive(pathname, item.href);
@@ -67,7 +71,7 @@ export function Sidebar({ showLogout = true }: SidebarProps) {
         })}
       </nav>
 
-      <div className="mt-auto space-y-2 border-t border-[color-mix(in_oklab,var(--sidebar-ink)_18%,transparent)] pt-4">
+      <div className="mt-auto shrink-0 space-y-2 border-t border-[color-mix(in_oklab,var(--sidebar-ink)_18%,transparent)] pt-4">
         <Link
           href="/settings"
           className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${

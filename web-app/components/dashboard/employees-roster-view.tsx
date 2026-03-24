@@ -7,6 +7,8 @@ import { fetchEmployeeRoster } from "@/lib/api/employees";
 import { queryKeys } from "@/lib/query-keys";
 import type { EmployeeRosterStoreGroup, RosterEmployee } from "@/lib/types/domain";
 
+import { dataTable } from "@/components/dashboard/data-table-styles";
+import { SectionHeader } from "@/components/dashboard/section-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,10 +55,10 @@ export function EmployeesRosterView() {
 
   if (isError) {
     return (
-      <Card className="border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--danger)]">
-        <p className="font-medium">Couldn&apos;t load the employee list.</p>
+        <Card className="border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--danger)]">
+        <p className="font-medium">Could not load the employee list.</p>
         <p className="mt-1 text-[var(--text-secondary)]">
-          {error instanceof Error ? error.message : "Try refreshing the page or signing in again."}
+          {error instanceof Error ? error.message : "Refresh the page or sign in again."}
         </p>
         <button
           type="button"
@@ -71,10 +73,14 @@ export function EmployeesRosterView() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Directory</h2>
-          <p className="mt-1 text-sm text-[var(--text-secondary)]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <SectionHeader
+            as="h2"
+            title="Directory"
+            description="People grouped by work location. Search only hides rows here—it does not change where someone works."
+          />
+          <p className="text-sm text-[var(--text-secondary)]">
             {isLoading
               ? "Loading…"
               : data
@@ -82,7 +88,7 @@ export function EmployeesRosterView() {
                 : null}
           </p>
         </div>
-        <div className="w-full sm:max-w-xs">
+        <div className="w-full shrink-0 sm:max-w-xs">
           <label className="sr-only" htmlFor="roster-search">
             Search roster
           </label>
@@ -96,7 +102,7 @@ export function EmployeesRosterView() {
       </div>
 
       {isLoading ? (
-        <Card className="border-[var(--border)] p-10 text-center text-sm text-[var(--text-muted)]">Loading roster…</Card>
+        <Card className="border-[var(--border)] p-10 text-center text-sm text-[var(--text-muted)]">Loading…</Card>
       ) : filteredGroups.length === 0 ? (
         <Card className="border-[var(--border)] p-10 text-center text-sm text-[var(--text-secondary)]">
           {q ? (
@@ -118,8 +124,11 @@ export function EmployeesRosterView() {
               className="overflow-hidden border-[var(--border)] bg-[var(--surface)] shadow-[0_12px_32px_rgba(34,22,42,0.06)]"
             >
               <div className="border-b border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3">
-                <h3 className="text-base font-semibold text-[var(--text-primary)]">{group.storeName}</h3>
-                <p className="text-xs text-[var(--text-muted)]">
+                <SectionHeader
+                  title={group.storeName}
+                  description="People who work at this location for schedules and time tracking."
+                />
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
                   {group.employees.length} assigned
                   {q ? " (filtered)" : ""}
                 </p>
@@ -127,41 +136,41 @@ export function EmployeesRosterView() {
               {group.employees.length === 0 ? (
                 <p className="px-4 py-6 text-sm text-[var(--text-secondary)]">No employees assigned to this store.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] table-fixed border-collapse text-left text-sm">
-                    <thead className="border-b border-[var(--border)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                <div className={dataTable.shell}>
+                  <table className={`${dataTable.table} min-w-[520px] table-fixed border-collapse`}>
+                    <thead className={dataTable.thead}>
                       <tr>
-                        <th className="w-[30%] px-4 py-2.5 text-left align-middle font-medium">Name</th>
-                        <th className="w-[18%] px-4 py-2.5 text-left align-middle font-medium">Code</th>
-                        <th className="w-[22%] px-4 py-2.5 text-left align-middle font-medium">Status</th>
-                        <th className="w-[30%] px-4 py-2.5 text-left align-middle font-medium">At this store</th>
+                        <th className={`${dataTable.th} w-[30%]`}>Name</th>
+                        <th className={`${dataTable.th} w-[18%]`}>Code</th>
+                        <th className={`${dataTable.th} w-[22%]`}>Status</th>
+                        <th className={`${dataTable.th} w-[30%]`}>At this store</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className={dataTable.tbody}>
                       {group.employees.map((employee) => (
-                        <tr key={`${group.storeId}-${employee.id}`} className="border-b border-[var(--border)] last:border-b-0">
-                          <td className="max-w-0 px-4 py-3 align-middle font-medium text-[var(--text-primary)]">
+                        <tr key={`${group.storeId}-${employee.id}`} className="bg-[var(--surface)]">
+                          <td className={`${dataTable.td} max-w-0 font-medium`}>
                             <span className="block truncate" title={employee.fullName}>
                               {employee.fullName}
                             </span>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3 align-middle font-mono text-[13px] text-[var(--text-secondary)]">
+                          <td className={`${dataTable.tdMuted} whitespace-nowrap font-mono text-[13px]`}>
                             {employee.employeeCode ?? "—"}
                           </td>
-                          <td className="px-4 py-3 align-middle">
+                          <td className={dataTable.td}>
                             <Badge tone={statusTone(employee.status)} className="whitespace-nowrap">
                               {statusLabel(employee.status)}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 align-middle">
+                          <td className={dataTable.td}>
                             {employee.isPrimaryForStore ? (
                               <Badge tone="primary" className="whitespace-nowrap">
                                 Primary
                               </Badge>
                             ) : (
-                              <span className="inline-flex items-center whitespace-nowrap rounded-full border border-[var(--border)] bg-[var(--surface-soft)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]">
+                              <Badge tone="neutral" className="whitespace-nowrap">
                                 Also works here
-                              </span>
+                              </Badge>
                             )}
                           </td>
                         </tr>

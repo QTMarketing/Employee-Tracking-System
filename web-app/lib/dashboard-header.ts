@@ -7,49 +7,49 @@ export function getDashboardHeader(pathname: string): { title: string; subtitle:
 
   const entries: { prefix: string; title: string; subtitle: string }[] = [
     {
-      prefix: "/reports/hour-mix",
-      title: "Hour mix report",
-      subtitle: "Regular, OT, and DT breakdown for active shifts.",
+      prefix: "/schedules",
+      title: "Schedules",
+      subtitle: "Planned shifts by store—templates, coverage, and manager edits.",
     },
     {
-      prefix: "/reports/labor-by-store",
-      title: "Labor by store",
-      subtitle: "Estimated labor cost and share by location.",
+      prefix: "/pto",
+      title: "PTO & time off",
+      subtitle: "Request time off and approve or deny team requests for your locations.",
     },
     {
       prefix: "/reports",
       title: "Reports",
-      subtitle: "Payroll-focused summaries and drill-downs.",
+      subtitle: "Hour mix and labor-by-store views from the same clock data and hour rules.",
     },
     {
       prefix: "/settings",
       title: "Settings",
-      subtitle: "Workspace preferences and integrations.",
+      subtitle: "Overtime, rounding, and policies that determine how hours are calculated.",
     },
     {
       prefix: "/audit-log",
       title: "Audit log",
-      subtitle: "Immutable history of sensitive actions.",
+      subtitle: "Record of who changed time and employee data, and when.",
     },
     {
       prefix: "/timesheets",
       title: "Timesheets",
-      subtitle: "Review and approve time by period and store.",
+      subtitle: "Closed shifts with calculated hours—review and approve before payroll.",
     },
     {
       prefix: "/employees",
       title: "Employees",
-      subtitle: "Directory, roles, and store assignments.",
+      subtitle: "Who works here and which locations they belong to.",
     },
     {
       prefix: "/time-clock",
       title: "Time clock",
-      subtitle: "Clock in, breaks, and clock out by store.",
+      subtitle: "Record clock in, breaks, and clock out—hours calculate from your location rules.",
     },
     {
       prefix: "/overview",
-      title: "Overview",
-      subtitle: "Multi-store labor visibility and approvals in one place.",
+      title: "Operational overview",
+      subtitle: "Real-time workforce metrics, labor trends, and open shifts for your locations.",
     },
   ];
 
@@ -62,13 +62,13 @@ export function getDashboardHeader(pathname: string): { title: string; subtitle:
 
   if (normalized === "/" || normalized === "") {
     return {
-      title: "Overview",
-      subtitle: "Multi-store labor visibility and approvals in one place.",
+      title: "Operational overview",
+      subtitle: "Real-time workforce metrics, labor trends, and open shifts for your locations.",
     };
   }
 
   return {
-    title: "HR System",
-    subtitle: "Time, people, and approvals.",
+    title: "Dashboard",
+    subtitle: "Clock in and out, calculate hours, and manage your workforce.",
   };
 }
